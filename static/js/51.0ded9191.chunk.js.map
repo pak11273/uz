@@ -1,0 +1,1 @@
+{"version":3,"sources":["layouts/profile/profile-settings.js"],"names":[],"mappings":"4FAAA,2BAEe,4BAAM","file":"static/js/51.0ded9191.chunk.js","sourcesContent":["import React from \"react\"\n\nexport default () => <h1>Profile Settings</h1>\n"],"sourceRoot":""}

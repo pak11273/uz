@@ -1,0 +1,2 @@
+(this.webpackJsonpuz=this.webpackJsonpuz||[]).push([[13],{1129:function(t,n,e){"use strict";e.r(n),e.d(n,"default",(function(){return s}));var u=e(10),r=e(11),a=e(12),c=e(13),i=e(0),o=e.n(i),s=function(t){Object(c.a)(e,t);var n=Object(a.a)(e);function e(){return Object(u.a)(this,e),n.apply(this,arguments)}return Object(r.a)(e,[{key:"render",value:function(){return o.a.createElement("div",null)}}]),e}(i.Component)}}]);
+//# sourceMappingURL=admin-settings.a461522d.chunk.js.map
