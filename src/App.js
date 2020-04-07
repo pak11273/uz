@@ -3,7 +3,7 @@ import "react-toastify/dist/ReactToastify.css"
 import { MuiThemeProvider, createMuiTheme } from "@material-ui/core/styles"
 /* eslint-disable prefer-destructuring, dot-notation  */
 import React, { Component } from "react"
-import { Route, BrowserRouter as Router, Switch } from "react-router-dom"
+import { Route, HashRouter as Router, Switch } from "react-router-dom"
 import { cookies, local, session } from "brownies"
 
 import { ApolloProvider as ApolloHooksProvider } from "react-apollo-hooks"
