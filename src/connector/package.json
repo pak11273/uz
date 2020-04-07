@@ -1,0 +1,35 @@
+{
+  "name": "@utterzone/connector",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "license": "PROPIETARY",
+  "scripts": {
+    "babel": "rm -rf ./dist && babel -e graphql,ql,js src --out-dir dist --copy-files --no-comments"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.2.3",
+    "@babel/core": "^7.3.4",
+    "@babel/plugin-proposal-class-properties": "^7.3.4",
+    "@babel/plugin-syntax-dynamic-import": "^7.2.0",
+    "@babel/plugin-transform-runtime": "^7.3.4",
+    "@babel/preset-env": "^7.3.4",
+    "@babel/preset-react": "^7.0.0",
+    "@babel/register": "^7.4.4"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.4.2",
+    "@utterzone/common": "^1.0.0",
+    "@utterzone/connector": "^1.0.0",
+    "graphql": "^14.0.2",
+    "graphql-tag": "^2.10.0",
+    "history": "^4.7.2",
+    "react": "^16.6.3",
+    "react-apollo": "^2.2.4",
+    "react-dom": "^16.6.3",
+    "react-native-web": "^0.10.0-alpha.2",
+    "rimraf": "^2.6.3"
+  },
+  "resolutions": {
+    "babel-core": "7.0.0-bridge.0"
+  }
+}

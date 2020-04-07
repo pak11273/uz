@@ -1,0 +1,357 @@
+import React, {Component} from "react"
+import {Redirect} from "react-router-dom"
+import {withApollo} from "react-apollo"
+import {toast} from "react-toastify"
+
+import {withStyles} from "@material-ui/core/styles"
+import Grid from "@material-ui/core/Grid"
+
+import socket from "../../../services/socketio/group-chat.js"
+import AppContainer from "../../../apps/app-container"
+/* import Button from "@material-ui/core/Button" */
+import Chat from "./chat/chat.js"
+import ChevronLeftIcon from "@material-ui/icons/ChevronLeft"
+import ChevronRightIcon from "@material-ui/icons/ChevronRight"
+import classNames from "classnames"
+import Drawer from "@material-ui/core/Drawer"
+import List from "@material-ui/core/List"
+import ListItem from "@material-ui/core/ListItem"
+import ListItemIcon from "@material-ui/core/ListItemIcon"
+import ListItemText from "@material-ui/core/ListItemText"
+import InboxIcon from "@material-ui/icons/MoveToInbox"
+import Divider from "@material-ui/core/Divider"
+import IconButton from "@material-ui/core/IconButton"
+import MailIcon from "@material-ui/icons/Mail"
+
+import {Spacer} from "../../../components"
+import Members from "./members/members.js"
+import Notebook from "./notebook/notebook.js"
+import {session} from "brownies"
+
+import {GET_LEVELS, GET_LEVEL} from "../../../graphql/queries/level-queries.js"
+import {REZONE} from "../../../graphql/queries/zone-queries.js"
+import {styles} from "../styles.js"
+
+/* const styles = theme => ({ */
+/*   app: { */
+/*     /1* height: "300px" *1/ */
+/*   }, */
+/*   root: { */
+/*     backgroundColor: "#3e3e3e", */
+/*     flexGrow: 1, */
+/*     marginTop: -20 */
+/*   }, */
+/*   paper: { */
+/*     padding: theme.spacing.unit * 2, */
+/*     textAlign: "center", */
+/*     color: theme.palette.text.secondary */
+/*   } */
+/* }) */
+
+const Loader = () => <div>Loading...</div>
+
+class Zone extends Component {
+  locationName = this.props.path
+
+  state = {
+    resources: "",
+    receiveMsg: "",
+    user: {name: "beef"},
+    usersList: [],
+    isRegisterInProcess: false,
+    chatrooms: null,
+    socketio: socket(this.props.history.location.state),
+    host: false,
+    rightOpen: false
+  }
+
+  componentDidMount = async () => {
+    const {zoneId} = this.props.history.location.state
+    /* this.state.socketio.usersList(usersList => { */
+    /*   this.setState( */
+    /*     { */
+    /*       usersList */
+    /*     }, */
+    /*     console.log("userlist; ", this.state.usersList) */
+    /*   ) */
+    /* }) */
+
+    // rehydrate levels and vocabulary for returning hosts
+    const hostedZoneId = session.user.hostedZone && session.user.hostedZone._id
+    if (zoneId === hostedZoneId || session.zone._id === hostedZoneId) {
+      this.setState(
+        {
+          host: true
+        },
+        async () => {
+          if (this.state.host) {
+            const onComplete = (zone, courseLevel, courseLevels) => {
+              session.levels = courseLevels.data.getLevels.levels
+              session.vocabulary = courseLevel.data.getLevel.vocabulary
+              session.modifier =
+                courseLevels.data.getLevels.levels[session.level - 1].modifier
+
+              toast.success("You have successfully reconnected to your zone.", {
+                className: "toasty",
+                bodyClassName: "toasty-body",
+                hideProgressBar: true
+              })
+            }
+
+            try {
+              const zone = await this.props.client.query({
+                query: REZONE,
+                variables: {
+                  username: session.user.username
+                }
+              })
+
+              // rehydrate zone
+              session.zone = zone.data.rezone
+              session.level = zone.data.rezone.courseLevel
+
+              // if zone is legit
+              if (zone) {
+                const courseLevels = await this.props.client.query({
+                  fetchPolicy: "network-only",
+                  query: GET_LEVELS,
+                  variables: {
+                    courseId: zone.data.rezone.course._id
+                  }
+                })
+
+                const courseLevel = await this.props.client.query({
+                  query: GET_LEVEL,
+                  variables: {
+                    levelId:
+                      courseLevels.data.getLevels.levels[session.level - 1]._id
+                  }
+                })
+
+                onComplete(zone, courseLevel, courseLevels)
+              }
+            } catch (err) {
+              /* console.error("TEST ERR =>", err.graphQLErrors.map(x => x.message)); */
+              const msg = err.message.replace("GraphQL error:", "").trim()
+              if (err.message.indexOf("You can only host") !== -1) {
+                toast.warn(msg, {
+                  className: "toasty",
+                  bodyClassName: "toasty-body",
+                  hideProgressBar: true
+                })
+              }
+            }
+          }
+        }
+      )
+    }
+  }
+
+  componentWillUnmount() {
+    alert("i left the chat")
+    // TODO memory leak in console.  Kill socket.io connection??
+    // TODO remove socket listeners
+
+    /* socket.off('newMessage') */
+    /* socket.off('createMessage') */
+  }
+
+  onLeaveZone = (zoneId, onLeaveSuccess) => {
+    this.state.socketio.leave(zoneId, err => {
+      if (err) return console.error(err)
+      return onLeaveSuccess()
+    })
+    // TODO notify remaining occupants that host has left the zone.
+  }
+
+  getZones = () => {
+    this.state.client.getZones((err, chatrooms) => {
+      this.setState({chatrooms})
+    })
+  }
+
+  register = name => {
+    const onRegisterResponse = user =>
+      this.sejState({isRegisterInProcess: false, user})
+    this.setState({isRegisterInProcess: true})
+    this.state.socketio.register(name, (err, user) => {
+      if (err) return onRegisterResponse(null)
+      return onRegisterResponse(user)
+    })
+  }
+
+  renderUserSelectionOrRedirect = renderUserSelection => {
+    if (this.state.user) {
+      return <Redirect to="/" />
+    }
+
+    return this.state.isRegisterInProcess ? <Loader /> : renderUserSelection()
+  }
+
+  handleDrawerRightOpen = () => {
+    this.setState(
+      {rightOpen: true},
+      console.log("rightdraser open: ", this.state.rightOpen)
+    )
+  }
+
+  handleDrawerRightClose = () => {
+    this.setState(
+      {rightOpen: false},
+      console.log("rightdraser close: ", this.state.rightOpen)
+    )
+  }
+
+  render() {
+    const {classes, theme} = this.props
+    console.log("direction", theme.direction)
+    const {zone} = session
+    const {username} = (session && session.user) || {username: ""}
+    /* const {chatHistory} = history.location.state */
+    /* this.state.socketio.connected(zone) */
+    return (
+      <React.Fragment>
+        <Grid container className={classes.root}>
+          <Grid item xs={12} sm={12} md={6} lg={8} className={classes.app}>
+            <Drawer
+              variant="permanent"
+              className={classNames(classes.drawer, {
+                [classes.drawerOpen]: this.state.open,
+                [classes.drawerClose]: !this.state.open
+              })}
+              classes={{
+                paper: classNames({
+                  [classes.drawerOpen]: this.state.open,
+                  [classes.drawerClose]: !this.state.open
+                })
+              }}
+              open={this.state.open}>
+              <div className={classes.toolbar}>
+                <IconButton onClick={this.handleDrawerClose}>
+                  {theme.direction === "rtl" ? (
+                    <ChevronRightIcon />
+                  ) : (
+                    <ChevronLeftIcon />
+                  )}
+                </IconButton>
+              </div>
+              <Divider />
+              <List>
+                {["What", "Starred", "Send email", "Drafts"].map(
+                  (text, index) => (
+                    <ListItem button key={text}>
+                      <ListItemIcon>
+                        {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
+                      </ListItemIcon>
+                      <ListItemText primary={text} />
+                    </ListItem>
+                  )
+                )}
+              </List>
+              <Divider />
+              <List>
+                {["All mail", "Trash", "Spam"].map((text, index) => (
+                  <ListItem button key={text}>
+                    <ListItemIcon>
+                      {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
+                    </ListItemIcon>
+                    <ListItemText primary={text} />
+                  </ListItem>
+                ))}
+              </List>
+            </Drawer>
+          </Grid>
+          <Grid item xs={12} sm={12} md={6} lg={8} className={classes.app}>
+            <AppContainer />
+            <Members usersList={this.state.usersList} />
+          </Grid>
+          <Grid
+            style={{
+              background: "LightGray"
+            }}
+            item
+            xs={12}
+            sm={12}
+            md={6}
+            lg={4}>
+            <Chat
+              host={this.state.host}
+              onLeave={() =>
+                this.onLeaveZone(zone._id, () => history.push("/zones"))
+              }
+              user={this.state.user}
+              onSendMessage={(message, cb) =>
+                this.state.socketio.createMessage({
+                  username,
+                  zoneId: zone._id,
+                  message,
+                  cb
+                })
+              }
+              newMessage={this.state.socketio.newMessage}
+              zone="changeme"
+              /* usersList={this.state.usersList} */
+            />
+          </Grid>
+          <Grid item xs={12} sm={12} md={6} lg={8} className={classes.app}>
+            {/* Right Drawer */}
+            <Drawer
+              anchor="right"
+              variant="permanent"
+              className={classNames(classes.drawer, {
+                [classes.drawerRightOpen]: this.state.rightOpen,
+                [classes.drawerRightClose]: !this.state.rightOpen
+              })}
+              classes={{
+                paper: classNames({
+                  [classes.drawerRightOpen]: this.state.rightOpen,
+                  [classes.drawerRightClose]: !this.state.rightOpen
+                })
+              }}
+              open={this.state.rightOpen}>
+              <div className={classes.toolbar}>
+                <Spacer margin="64px 0 0 0" />
+                {!this.state.rightOpen ? (
+                  <IconButton onClick={this.handleDrawerRightOpen}>
+                    <ChevronLeftIcon />
+                  </IconButton>
+                ) : (
+                  <IconButton onClick={this.handleDrawerRightClose}>
+                    <ChevronRightIcon />
+                  </IconButton>
+                )}
+              </div>
+              <Divider />
+              <List>
+                {["Inbox", "Starred", "Send email", "Drafts"].map(
+                  (text, index) => (
+                    <ListItem button key={text}>
+                      <ListItemIcon>
+                        {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
+                      </ListItemIcon>
+                    </ListItem>
+                  )
+                )}
+              </List>
+              <Divider />
+              <List>
+                {["guests", "Trash", "Spam"].map((text, index) => (
+                  <ListItem button key={text}>
+                    <ListItemIcon>
+                      {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
+                    </ListItemIcon>
+                  </ListItem>
+                ))}
+              </List>
+            </Drawer>
+          </Grid>
+          <Grid item xs={12}>
+            <Notebook />
+          </Grid>
+        </Grid>
+      </React.Fragment>
+    )
+  }
+}
+
+export default withStyles(styles, {withTheme: true})(withApollo(Zone))
