@@ -18,6 +18,7 @@ tags
 .cache-loader/
 dump.rdb
 test
+build/
 
 # Logs
 logs

@@ -1,5 +1,6 @@
 {
   "name": "uz",
+  "homepage": "https://pak11273.github.io/uz"
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -62,7 +63,6 @@
     "@babel/preset-env": "^7.4.5",
     "@babel/preset-react": "^7.0.0",
     "@babel/register": "^7.4.4",
-    "@testing-library/react": "^8.0.6",
     "add": "^2.0.6",
     "babel-core": "^7.0.0-bridge.0",
     "babel-jest": "^24.8.0",
@@ -102,7 +102,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "predeploy": "yarn prod",
+    "predeploy": "yarn build",
     "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
